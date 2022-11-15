@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-require('dotenv').config();
 const port = process.env.PORT || 5000
+require('dotenv').config()
 
 const app = express();
 
@@ -21,15 +21,24 @@ async function run() {
         const bookingCollection = client.db('doctorsPortal').collection('bookings')
         //api get
         app.get('/appointmentOptions', async (req, res) => {
+            const date = req.query.date;
             const query = {}
             const options = await appointmentOptionCollection.find(query).toArray();
+            const bookingQuery = { appointmentDate: date }
+            const alreadyBooked = await bookingCollection.find(bookingQuery).toArray();
+
+            options.forEach(option => {
+                const optionBooked = alreadyBooked.filter(book => book.treatment === option.name)
+                const bookedSlots = optionBooked.map(book => book.slot)
+                const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot))
+                option.slots = remainingSlots;
+            })
             res.send(options);
         });
 
         //api post
         app.post('/bookings', async (req, res) => {
             const booking = req.body
-            console.log(booking);
             const result = await bookingCollection.insertOne(booking);
             res.send(result)
         })
