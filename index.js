@@ -32,6 +32,7 @@ async function run() {
                 const bookedSlots = optionBooked.map(book => book.slot)
                 const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot))
                 option.slots = remainingSlots;
+
             })
             res.send(options);
         });
