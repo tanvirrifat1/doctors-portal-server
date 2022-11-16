@@ -19,8 +19,9 @@ async function run() {
     try {
         const appointmentOptionCollection = client.db('doctorsPortal').collection('appointmentOptions');
         const bookingCollection = client.db('doctorsPortal').collection('bookings')
+        const usersCollection = client.db('doctorsPortal').collection('users')
 
-        //api get
+        // //api get
         app.get('/appointmentOptions', async (req, res) => {
             const date = req.query.date;
             const query = {}
@@ -39,6 +40,53 @@ async function run() {
             })
             res.send(options);
         });
+
+
+        app.get('/v2/appointmentOptions', async (req, res) => {
+            const date = req.query.date;
+            const options = await appointmentOptionCollection.aggregate([
+                {
+                    $lookup: {
+                        from: 'bookings',
+                        localField: 'name',
+                        foreignField: 'treatment',
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ['$appointmentDate', date]
+                                    }
+                                }
+                            }
+                        ],
+                        as: 'booked'
+                    }
+                },
+                {
+                    $project: {
+                        name: 1,
+                        slots: 1,
+                        booked: {
+                            $map: {
+                                input: '$booked',
+                                as: 'book',
+                                in: '$$book.slot'
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        name: 1,
+                        slots: {
+                            $setDifference: ['$slots', '$booked']
+                        }
+                    }
+                }
+            ]).toArray();
+            res.send(options);
+        })
+
         //--------------//
         app.get('/v2/appointmentOptions', async (req, res) => {
             const date = req.query.date;
@@ -85,6 +133,14 @@ async function run() {
             res.send(options)
         })
 
+        //--------------//
+        app.get('/bookings', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const bookings = await bookingCollection.find(query).toArray();
+            res.send(bookings)
+        })
+        //-----------------//
 
         //api post
         app.post('/bookings', async (req, res) => {
@@ -104,7 +160,14 @@ async function run() {
             }
             const result = await bookingCollection.insertOne(booking);
             res.send(result)
+        });
+        //--------//
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user)
+            res.send(result)
         })
+
     }
     finally {
 
