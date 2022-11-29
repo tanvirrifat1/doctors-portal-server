@@ -350,6 +350,13 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
             res.send(result)
         });
+        //-----------userDelete-----------//
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter)
+            res.send(result)
+        })
 
         // temporary to update price field on appointment options
 
